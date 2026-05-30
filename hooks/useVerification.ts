@@ -27,10 +27,17 @@ export function useVerification(claimId: string | null) {
       if (claimData.status === 'completed') {
         const { data: verData } = await supabase
           .from('verifications')
-          .select('*, sources(*)')
+          .select('*')
           .eq('claim_id', claimId)
           .single()
-        if (verData) setVerification(verData)
+        if (verData) {
+          setVerification(verData)
+          const { data: srcData } = await supabase
+            .from('sources')
+            .select('*')
+            .eq('verification_id', verData.id)
+          if (srcData) setVerification({ ...verData, sources: srcData } as any)
+        }
       }
     }
 
@@ -46,7 +53,7 @@ export function useVerification(claimId: string | null) {
           if (payload.new.status === 'completed') {
             const { data: verData } = await supabase
               .from('verifications')
-              .select('*, sources(*)')
+              .select('*')
               .eq('claim_id', claimId)
               .single()
             if (verData) setVerification(verData)
@@ -69,15 +76,29 @@ export function useFeed(trackContext?: string, badge?: string) {
     async function fetchFeed() {
       let query = supabase
         .from('claims')
-        .select('*, verifications(badge, confidence_score, verdict_summary, primary_sources_count)')
+        .select('*')
         .eq('status', 'completed')
         .order('created_at', { ascending: false })
         .limit(20)
 
       if (trackContext) query = query.eq('track_context', trackContext)
 
-      const { data } = await query
-      if (data) setClaims(data)
+      const { data: claimsData } = await query
+      if (!claimsData) { setLoading(false); return }
+
+      // Fetch verifications separately to avoid RLS join issues
+      const claimsWithVerifications = await Promise.all(
+        claimsData.map(async (claim) => {
+          const { data: ver } = await supabase
+            .from('verifications')
+            .select('badge, confidence_score, verdict_summary, primary_sources_count')
+            .eq('claim_id', claim.id)
+            .single()
+          return { ...claim, verifications: ver }
+        })
+      )
+
+      setClaims(claimsWithVerifications)
       setLoading(false)
     }
     fetchFeed()

@@ -95,12 +95,6 @@ export default function FeedPage() {
             No claims match this filter
           </div>
         )}
-
-        <div className="text-center mt-8">
-          <button className="text-sm text-[var(--color-primary)] hover:text-[var(--color-primary-hover)] font-medium transition-colors cursor-pointer">
-            Load more
-          </button>
-        </div>
       </div>
 
       <VerifyModal isOpen={modalIsOpen} onClose={() => setModalIsOpen(false)} />
