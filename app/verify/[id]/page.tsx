@@ -9,6 +9,7 @@ import { useVerification } from '@/hooks/useVerification';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Download, Bell, X } from 'lucide-react';
 import { useState } from 'react';
+import { generateBattlecard } from '@/lib/battlecard';
 
 export default function ClaimDetail() {
   const router = useRouter();
@@ -104,7 +105,7 @@ export default function ClaimDetail() {
                   <Bell className="h-4 w-4" />
                   Set Monitor
                 </button>
-                <button className="btn-outline flex items-center gap-2">
+                <button onClick={() => verification && generateBattlecard(claim, verification, (verification as any).sources || [])} className="btn-outline flex items-center gap-2">
                   <Download className="h-4 w-4" />
                   Export PDF
                 </button>
