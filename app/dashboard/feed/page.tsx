@@ -3,90 +3,10 @@
 import DashboardSidebar from '@/components/layout/DashboardSidebar';
 import ClaimCard from '@/components/feed/ClaimCard';
 import VerifyModal from '@/components/verification/VerifyModal';
-import { Claim, BadgeColor } from '@/lib/types';
+import { BadgeColor } from '@/lib/types';
+import { useFeed } from '@/hooks/useVerification';
 import { useState } from 'react';
 import { Shield } from 'lucide-react';
-
-const MOCK_CLAIMS: Claim[] = [
-  {
-    id: '1', input_type: 'url', input_content: 'https://example.com/article1',
-    extracted_claim: 'Scientists have discovered a new species of butterfly in the Amazon rainforest.',
-    category: 'Science', track_context: 'consumer', status: 'completed',
-    agent_progress: 'Verification completed', created_at: '2024-01-15T10:30:00Z', updated_at: '2024-01-15T14:20:00Z',
-    verification: {
-      id: 'v1', claim_id: '1', badge: 'blue', confidence_score: 0.94,
-      verdict_summary: 'Verified: Multiple independent sources confirm the discovery.',
-      detailed_analysis: 'Three scientific journals and two official biodiversity databases confirm the existence of this new species.',
-      primary_sources_count: 2, secondary_sources_count: 3, contradictions_found: 0,
-      fact_checks_found: 2, processing_time_ms: 1250, model_used: 'google/gemma-4-31b-it', created_at: '2024-01-15T14:20:00Z',
-    },
-  },
-  {
-    id: '2', input_type: 'text', input_content: 'The new government policy will reduce taxes for all citizens by 20%.',
-    extracted_claim: 'The new government policy will reduce taxes for all citizens by 20%.',
-    category: 'Politics', track_context: 'consumer', status: 'completed',
-    agent_progress: 'Verification completed', created_at: '2024-01-14T09:15:00Z', updated_at: '2024-01-14T16:45:00Z',
-    verification: {
-      id: 'v2', claim_id: '2', badge: 'green', confidence_score: 0.87,
-      verdict_summary: 'Confirmed: Official government document directly confirms the policy details.',
-      detailed_analysis: 'The official gazette published by the Ministry of Finance confirms the tax reduction policy.',
-      primary_sources_count: 1, secondary_sources_count: 2, contradictions_found: 0,
-      fact_checks_found: 1, processing_time_ms: 980, model_used: 'google/gemma-4-31b-it', created_at: '2024-01-14T16:45:00Z',
-    },
-  },
-  {
-    id: '3', input_type: 'topic', input_content: 'AI regulation',
-    extracted_claim: 'Recent studies show that AI regulation will stifle innovation in the tech sector.',
-    category: 'Technology', track_context: 'track1_gtm', status: 'completed',
-    agent_progress: 'Verification completed', created_at: '2024-01-13T11:00:00Z', updated_at: '2024-01-13T15:30:00Z',
-    verification: {
-      id: 'v3', claim_id: '3', badge: 'yellow', confidence_score: 0.65,
-      verdict_summary: 'Partially True: While some regulations may impact certain aspects, overall innovation continues.',
-      detailed_analysis: 'Academic research shows mixed effects - some compliance costs exist but innovation adapts and continues.',
-      primary_sources_count: 1, secondary_sources_count: 4, contradictions_found: 1,
-      fact_checks_found: 3, processing_time_ms: 2100, model_used: 'google/gemma-4-31b-it', created_at: '2024-01-13T15:30:00Z',
-    },
-  },
-  {
-    id: '4', input_type: 'url', input_content: 'https://example.com/article4',
-    extracted_claim: 'A celebrity endorsed a new cryptocurrency that guaranteed 100% returns.',
-    category: 'Entertainment', track_context: 'consumer', status: 'completed',
-    agent_progress: 'Verification completed', created_at: '2024-01-12T14:20:00Z', updated_at: '2024-01-12T18:10:00Z',
-    verification: {
-      id: 'v4', claim_id: '4', badge: 'orange', confidence_score: 0.72,
-      verdict_summary: 'Misleading: The celebrity did mention the crypto but did not guarantee returns.',
-      detailed_analysis: 'The celebrity\'s actual statement was about the technology\'s potential, not a financial guarantee.',
-      primary_sources_count: 1, secondary_sources_count: 3, contradictions_found: 2,
-      fact_checks_found: 4, processing_time_ms: 1750, model_used: 'google/gemma-4-31b-it', created_at: '2024-01-12T18:10:00Z',
-    },
-  },
-  {
-    id: '5', input_type: 'text', input_content: 'The moon landing was faked in a Hollywood studio.',
-    extracted_claim: 'The moon landing was faked in a Hollywood studio.',
-    category: 'Conspiracy', track_context: 'consumer', status: 'completed',
-    agent_progress: 'Verification completed', created_at: '2024-01-11T08:45:00Z', updated_at: '2024-01-11T12:00:00Z',
-    verification: {
-      id: 'v5', claim_id: '5', badge: 'red', confidence_score: 0.96,
-      verdict_summary: 'False: Directly contradicted by multiple independent sources including moon rock samples.',
-      detailed_analysis: 'NASA telemetry, third-party tracking data, and lunar samples all confirm the authenticity of the moon landings.',
-      primary_sources_count: 3, secondary_sources_count: 5, contradictions_found: 5,
-      fact_checks_found: 6, processing_time_ms: 1100, model_used: 'google/gemma-4-31b-it', created_at: '2024-01-11T12:00:00Z',
-    },
-  },
-  {
-    id: '6', input_type: 'topic', input_content: 'Ancient alien civilizations',
-    extracted_claim: 'There is insufficient evidence to confirm or deny the existence of ancient alien civilizations visiting Earth.',
-    category: 'History', track_context: 'consumer', status: 'completed',
-    agent_progress: 'Verification completed', created_at: '2024-01-10T16:30:00Z', updated_at: '2024-01-10T16:35:00Z',
-    verification: {
-      id: 'v6', claim_id: '6', badge: 'gray', confidence_score: 0.30,
-      verdict_summary: 'Unverifiable: Insufficient public data to render a verdict on this topic.',
-      detailed_analysis: 'While there are intriguing artifacts, no credible scientific evidence supports or refutes the claim.',
-      primary_sources_count: 0, secondary_sources_count: 2, contradictions_found: 0,
-      fact_checks_found: 0, processing_time_ms: 800, model_used: 'google/gemma-4-31b-it', created_at: '2024-01-10T16:35:00Z',
-    },
-  },
-];
 
 const FILTERS: { value: 'all' | BadgeColor; label: string; color: string; activeColor: string }[] = [
   { value: 'all', label: 'All', color: 'border-[var(--color-border)] text-[var(--color-text-secondary)]', activeColor: 'bg-[var(--color-primary)] text-white border-[var(--color-primary)]' },
@@ -99,18 +19,18 @@ const FILTERS: { value: 'all' | BadgeColor; label: string; color: string; active
 ];
 
 export default function FeedPage() {
+  const { claims, loading } = useFeed();
   const [modalIsOpen, setModalIsOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState<'all' | BadgeColor>('all');
 
-  const filteredClaims = activeFilter === 'all' 
-    ? MOCK_CLAIMS 
-    : MOCK_CLAIMS.filter(c => c.verification?.badge === activeFilter);
+  const filteredClaims = activeFilter === 'all'
+    ? claims
+    : claims.filter(c => (c as any).verifications?.badge === activeFilter);
 
   return (
     <>
       <DashboardSidebar activeItem="feed" />
       <div className="flex-1 p-6 overflow-auto">
-        {/* Hero */}
         <div className="card p-8 mb-6 text-center bg-gradient-to-br from-[var(--color-primary-light)] to-white">
           <h1 className="text-3xl font-bold text-[var(--color-text)] mb-2">
             Is it true?
@@ -142,7 +62,6 @@ export default function FeedPage() {
           </div>
         </div>
 
-        {/* Filters */}
         <div className="flex flex-wrap gap-2 mb-5">
           {FILTERS.map((f) => (
             <button
@@ -157,14 +76,21 @@ export default function FeedPage() {
           ))}
         </div>
 
-        {/* Feed Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-          {filteredClaims.map((claim) => (
-            <ClaimCard key={claim.id} claim={claim} />
-          ))}
-        </div>
+        {loading ? (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="skeleton h-24 rounded-xl" />
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            {filteredClaims.map((claim) => (
+              <ClaimCard key={claim.id} claim={claim} />
+            ))}
+          </div>
+        )}
 
-        {filteredClaims.length === 0 && (
+        {!loading && filteredClaims.length === 0 && (
           <div className="text-center py-12 text-[var(--color-muted)]">
             No claims match this filter
           </div>

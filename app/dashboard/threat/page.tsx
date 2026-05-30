@@ -4,37 +4,29 @@ import DashboardSidebar from '@/components/layout/DashboardSidebar';
 import ThreatTable from '@/components/dashboard/ThreatTable';
 import ThreatDetail from '@/components/dashboard/ThreatDetail';
 import VerifyModal from '@/components/verification/VerifyModal';
-import { BadgeColor } from '@/lib/types';
+import { useFeed } from '@/hooks/useVerification';
 import { useState } from 'react';
 import { Shield, AlertTriangle, TrendingUp, Activity, Plus, X } from 'lucide-react';
 
-const MOCK_THREATS = [
-  { id: 't1', claim: 'Acme Corp has recalled its Model X battery due to fire hazards - spreading on Reddit', badge: 'red' as BadgeColor, confidence: 0.94, sourcesCount: 5, timeAgo: '2h ago' },
-  { id: 't2', claim: 'CEO stated in leaked email that Q3 earnings will miss by 40%', badge: 'red' as BadgeColor, confidence: 0.91, sourcesCount: 4, timeAgo: '3h ago' },
-  { id: 't3', claim: 'Competitor alleged to have violated data privacy regulations', badge: 'orange' as BadgeColor, confidence: 0.78, sourcesCount: 3, timeAgo: '5h ago' },
-  { id: 't4', claim: 'Rumor about upcoming regulatory changes in industry', badge: 'yellow' as BadgeColor, confidence: 0.62, sourcesCount: 4, timeAgo: '1d ago' },
-];
-
-const MOCK_MONITORS = [
-  { id: 'm1', query: 'Acme Corp', frequency: 'hourly', lastChecked: '12 min ago', status: 'active' as const, alerts: 3 },
-  { id: 'm2', query: 'product recall rumor', frequency: 'daily', lastChecked: '2 hours ago', status: 'active' as const, alerts: 1 },
-  { id: 'm3', query: 'CEO earnings quote', frequency: 'hourly', lastChecked: '45 min ago', status: 'active' as const, alerts: 0 },
-  { id: 'm4', query: 'competitor SOC 2 claim', frequency: 'daily', lastChecked: '1 day ago', status: 'paused' as const, alerts: 0 },
-];
-
 export default function ThreatMonitor() {
+  const { claims, loading } = useFeed('track3_security');
   const [showAddMonitor, setShowAddMonitor] = useState(false);
-  const [monitors, setMonitors] = useState(MOCK_MONITORS);
   const [newQuery, setNewQuery] = useState('');
   const [newFrequency, setNewFrequency] = useState('daily');
-  const [selectedThreat, setSelectedThreat] = useState<typeof MOCK_THREATS[0] | null>(null);
+  const [selectedThreat, setSelectedThreat] = useState<any | null>(null);
 
-  const handleAddMonitor = () => {
-    if (!newQuery.trim()) return;
-    setMonitors([{ id: `m${Date.now()}`, query: newQuery, frequency: newFrequency, lastChecked: 'just now', status: 'active', alerts: 0 }, ...monitors]);
-    setNewQuery('');
-    setShowAddMonitor(false);
-  };
+  const threats = claims.map(c => ({
+    id: c.id,
+    claim: c.extracted_claim || c.input_content,
+    badge: (c as any).verifications?.badge || 'gray',
+    confidence: (c as any).verifications?.confidence_score || 0,
+    sourcesCount: (c as any).verifications?.primary_sources_count || 0,
+    timeAgo: new Date(c.created_at).toLocaleDateString(),
+  }));
+
+  const redCount = threats.filter(t => t.badge === 'red').length;
+  const orangeCount = threats.filter(t => t.badge === 'orange').length;
+  const avgConf = threats.length > 0 ? Math.round(threats.reduce((sum, t) => sum + t.confidence, 0) / threats.length * 100) : 0;
 
   return (
     <>
@@ -54,13 +46,12 @@ export default function ThreatMonitor() {
           </button>
         </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-4 gap-4 mb-6">
           {[
-            { label: 'Active Threats', value: MOCK_THREATS.length, icon: Shield, color: 'text-red-500', bg: 'bg-red-50' },
-            { label: 'Critical', value: MOCK_THREATS.filter(t => t.badge === 'red').length, icon: AlertTriangle, color: 'text-red-600', bg: 'bg-red-50' },
-            { label: 'Monitors Running', value: monitors.filter(m => m.status === 'active').length, icon: Activity, color: 'text-[var(--color-primary)]', bg: 'bg-[var(--color-primary-light)]' },
-            { label: 'Avg Confidence', value: '78%', icon: TrendingUp, color: 'text-blue-500', bg: 'bg-blue-50' },
+            { label: 'Active Threats', value: threats.length, icon: Shield, color: 'text-red-500', bg: 'bg-red-50' },
+            { label: 'Critical', value: redCount, icon: AlertTriangle, color: 'text-red-600', bg: 'bg-red-50' },
+            { label: 'Elevated', value: orangeCount, icon: Activity, color: 'text-orange-500', bg: 'bg-orange-50' },
+            { label: 'Avg Confidence', value: `${avgConf}%`, icon: TrendingUp, color: 'text-blue-500', bg: 'bg-blue-50' },
           ].map((s) => {
             const Icon = s.icon;
             return (
@@ -79,58 +70,26 @@ export default function ThreatMonitor() {
           })}
         </div>
 
-        {/* Threats Table */}
         <div className="card mb-6">
           <div className="px-5 py-4 border-b border-[var(--color-border)]">
             <h3 className="text-sm font-semibold text-[var(--color-text)]">All Threats</h3>
           </div>
           <div className="max-h-[300px] overflow-y-auto">
-            <ThreatTable threats={MOCK_THREATS} onThreatClick={setSelectedThreat} />
-          </div>
-        </div>
-
-        {/* Monitors */}
-        <div className="card">
-          <div className="px-5 py-4 border-b border-[var(--color-border)] flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-[var(--color-text)]">Monitored Threats</h3>
-            <span className="text-xs text-[var(--color-muted)]">{monitors.length} total</span>
-          </div>
-          <div className="max-h-[300px] overflow-y-auto">
-            <table className="w-full text-left">
-              <thead className="sticky top-0 bg-white">
-                <tr className="border-b border-[var(--color-border)]">
-                  {['Query', 'Frequency', 'Last Checked', 'Status', 'Alerts', 'Actions'].map(h => (
-                    <th key={h} className="px-5 py-3 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-muted)]">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--color-border)]">
-                {monitors.map((m) => (
-                  <tr key={m.id} className="hover:bg-[var(--color-bg)]/50 transition-colors cursor-pointer" onClick={() => setSelectedThreat({ id: m.id, claim: m.query, badge: 'yellow', confidence: 0.65, sourcesCount: 3, timeAgo: m.lastChecked })}>
-                    <td className="px-5 py-3.5 text-sm font-medium text-[var(--color-text)]">{m.query}</td>
-                    <td className="px-5 py-3.5 text-xs text-[var(--color-text-secondary)] capitalize">{m.frequency}</td>
-                    <td className="px-5 py-3.5 text-xs text-[var(--color-muted)]">{m.lastChecked}</td>
-                    <td className="px-5 py-3.5">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wider ${
-                        m.status === 'active' ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'
-                      }`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${m.status === 'active' ? 'bg-green-500' : 'bg-gray-400'}`}></span>
-                        {m.status}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3.5 text-sm font-mono text-[var(--color-text)]">{m.alerts}</td>
-                    <td className="px-5 py-3.5">
-                      <button onClick={() => setMonitors(monitors.filter(mon => mon.id !== m.id))} className="text-xs font-medium text-red-500 hover:text-red-600 transition-colors cursor-pointer">Remove</button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            {loading ? (
+              <div className="p-5 space-y-3">
+                {[1, 2, 3].map(i => <div key={i} className="skeleton h-12 rounded" />)}
+              </div>
+            ) : threats.length === 0 ? (
+              <div className="p-8 text-center text-[var(--color-muted)] text-sm">
+                No threats detected — all narratives verified
+              </div>
+            ) : (
+              <ThreatTable threats={threats} onThreatClick={setSelectedThreat} />
+            )}
           </div>
         </div>
       </div>
 
-      {/* Add Monitor Modal */}
       {showAddMonitor && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setShowAddMonitor(false)}></div>
@@ -153,7 +112,7 @@ export default function ThreatMonitor() {
                   ))}
                 </div>
               </div>
-              <button onClick={handleAddMonitor} disabled={!newQuery.trim()} className={`w-full py-2.5 font-medium rounded-lg text-sm transition-colors cursor-pointer ${!newQuery.trim() ? 'bg-gray-100 text-[var(--color-muted)] cursor-not-allowed' : 'bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white'}`}>Create Monitor</button>
+              <button onClick={() => setShowAddMonitor(false)} disabled={!newQuery.trim()} className={`w-full py-2.5 font-medium rounded-lg text-sm transition-colors cursor-pointer ${!newQuery.trim() ? 'bg-gray-100 text-[var(--color-muted)] cursor-not-allowed' : 'bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white'}`}>Create Monitor</button>
             </div>
           </div>
         </div>

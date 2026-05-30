@@ -5,19 +5,51 @@ import { BadgeShield } from '@/components/badge/BadgeShield';
 import ConfidenceMeter from '@/components/badge/ConfidenceMeter';
 import EvidenceTree from '@/components/verification/EvidenceTree';
 import VerificationProgress from '@/components/verification/VerificationProgress';
-import { useRouter, usePathname } from 'next/navigation';
-import { MOCK_CLAIMS } from './mockData';
+import { useVerification } from '@/hooks/useVerification';
+import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Download, Bell, X } from 'lucide-react';
 import { useState } from 'react';
 
 export default function ClaimDetail() {
   const router = useRouter();
-  const pathname = usePathname();
-  const claimId = pathname.split('/').pop() || '1';
-  const claim = MOCK_CLAIMS[claimId] || MOCK_CLAIMS['1'];
+  const params = useParams();
+  const claimId = params.id as string;
+  const { claim, verification, loading, error } = useVerification(claimId);
   const [showMonitor, setShowMonitor] = useState(false);
-  const [monitorQuery, setMonitorQuery] = useState(claim.extracted_claim || claim.input_content);
+  const [monitorQuery, setMonitorQuery] = useState('');
   const [monitorFrequency, setMonitorFrequency] = useState('daily');
+
+  if (loading) {
+    return (
+      <>
+        <Navbar />
+        <div className="max-w-5xl mx-auto p-6">
+          <div className="skeleton h-8 w-64 mb-6 rounded" />
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
+            <div className="space-y-5">
+              <div className="skeleton h-40 rounded-xl" />
+              <div className="skeleton h-32 rounded-xl" />
+            </div>
+            <div className="skeleton h-64 rounded-xl" />
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  if (error || !claim) {
+    return (
+      <>
+        <Navbar />
+        <div className="max-w-5xl mx-auto p-6 text-center py-20">
+          <p className="text-[var(--color-muted)]">Claim not found</p>
+        </div>
+      </>
+    );
+  }
+
+  const isProcessing = claim.status === 'pending' || claim.status === 'processing';
+  const extractedClaim = claim.extracted_claim || claim.input_content;
 
   return (
     <>
@@ -29,42 +61,44 @@ export default function ClaimDetail() {
           </button>
           <div>
             <p className="text-xs text-[var(--color-muted)]">Claim Detail</p>
-            <h1 className="text-lg font-bold text-[var(--color-text)] line-clamp-1">{claim.extracted_claim}</h1>
+            <h1 className="text-lg font-bold text-[var(--color-text)] line-clamp-1">{extractedClaim}</h1>
           </div>
         </div>
-        
+
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
           <div className="space-y-5">
             <div className="flex items-center gap-2">
               <span className="inline-block px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-[var(--color-primary-light)] text-[var(--color-primary)]">{claim.track_context}</span>
-              <span className="text-xs text-[var(--color-muted)]">Verified with {claim.verification?.model_used}</span>
+              {verification && (
+                <span className="text-xs text-[var(--color-muted)]">Verified with {verification.model_used}</span>
+              )}
             </div>
-            
-            {claim.status === 'processing' ? (
+
+            {isProcessing ? (
               <div className="card p-5">
                 <VerificationProgress agentProgress={claim.agent_progress} verificationProgress={{ discovery: 'pending', extraction: 'pending', crossReference: 'pending', verdict: 'pending' }} />
               </div>
-            ) : (
+            ) : verification ? (
               <>
                 <div className="card p-5 flex items-center gap-5">
-                  <BadgeShield badge={claim.verification!.badge} confidence={claim.verification!.confidence_score} size="xl" animated={true} />
+                  <BadgeShield badge={verification.badge} confidence={verification.confidence_score} size="xl" animated={true} />
                   <div className="space-y-2">
-                    <p className="text-sm font-medium text-[var(--color-text)]">{claim.verification!.verdict_summary}</p>
-                    <ConfidenceMeter confidence={claim.verification!.confidence_score} badge={claim.verification!.badge} />
+                    <p className="text-sm font-medium text-[var(--color-text)]">{verification.verdict_summary}</p>
+                    <ConfidenceMeter confidence={verification.confidence_score} badge={verification.badge} />
                   </div>
                 </div>
                 <div className="card p-5">
                   <h3 className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wider mb-3">Detailed Analysis</h3>
                   <div className="text-sm text-[var(--color-text-secondary)] space-y-3">
-                    {claim.verification!.detailed_analysis.split('\n\n').map((p: string, i: number) => (
+                    {verification.detailed_analysis?.split('\n\n').map((p: string, i: number) => (
                       <p key={i}>{p}</p>
                     ))}
                   </div>
                 </div>
               </>
-            )}
-            
-            {claim.status !== 'processing' && (
+            ) : null}
+
+            {!isProcessing && verification && (
               <div className="flex gap-3">
                 <button onClick={() => setShowMonitor(true)} className="btn-outline flex items-center gap-2">
                   <Bell className="h-4 w-4" />
@@ -77,29 +111,30 @@ export default function ClaimDetail() {
               </div>
             )}
           </div>
-          
+
           <div className="space-y-5">
             <div className="card p-5">
               <h3 className="text-xs font-semibold text-[var(--color-muted)] uppercase tracking-wider mb-4">Evidence</h3>
-              <EvidenceTree sources={claim.verification?.sources || []} />
+              <EvidenceTree sources={(verification as any)?.sources || []} />
             </div>
-            <div className="grid grid-cols-3 gap-3">
-              {[
-                { value: claim.verification?.primary_sources_count || 0, label: 'Primary' },
-                { value: claim.verification?.secondary_sources_count || 0, label: 'Secondary' },
-                { value: claim.verification?.fact_checks_found || 0, label: 'Fact Checks' },
-              ].map((s) => (
-                <div key={s.label} className="card p-3 text-center">
-                  <div className="text-xl font-mono font-bold text-[var(--color-text)]">{s.value}</div>
-                  <div className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-muted)]">{s.label}</div>
-                </div>
-              ))}
-            </div>
+            {verification && (
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { value: verification.primary_sources_count || 0, label: 'Primary' },
+                  { value: verification.secondary_sources_count || 0, label: 'Secondary' },
+                  { value: verification.fact_checks_found || 0, label: 'Fact Checks' },
+                ].map((s) => (
+                  <div key={s.label} className="card p-3 text-center">
+                    <div className="text-xl font-mono font-bold text-[var(--color-text)]">{s.value}</div>
+                    <div className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-muted)]">{s.label}</div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Monitor Modal */}
       {showMonitor && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setShowMonitor(false)}></div>
