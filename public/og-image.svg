@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#0A0F0D"/>
+  
+  <!-- Shield logo -->
+  <g transform="translate(100, 165) scale(3)">
+    <defs>
+      <linearGradient id="g" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stop-color="#2DD4BF"/>
+        <stop offset="100%" stop-color="#0D9488"/>
+      </linearGradient>
+    </defs>
+    <path d="M50 5 L88 20 L88 56 Q88 84 50 95 Q12 84 12 56 L12 20 Z" fill="url(#g)"/>
+    <text x="50" y="52" text-anchor="middle" dominant-baseline="central" fill="white" font-family="monospace" font-size="28" font-weight="bold">VN</text>
+  </g>
+  
+  <!-- Title -->
+  <text x="380" y="260" fill="#F0FDF4" font-family="system-ui, sans-serif" font-size="72" font-weight="700">Verified News</text>
+  
+  <!-- Subtitle -->
+  <text x="380" y="320" fill="#6B7280" font-family="system-ui, sans-serif" font-size="24">AI agent swarm that verifies news claims</text>
+  <text x="380" y="355" fill="#6B7280" font-family="system-ui, sans-serif" font-size="24">against live web data in real time.</text>
+  
+  <!-- Badge row -->
+  <g transform="translate(380, 400)">
+    <rect x="0" y="0" width="48" height="24" rx="12" fill="#3B82F6"/>
+    <text x="24" y="16" text-anchor="middle" fill="white" font-family="monospace" font-size="10" font-weight="bold">VRF</text>
+    
+    <rect x="60" y="0" width="48" height="24" rx="12" fill="#22C55E"/>
+    <text x="84" y="16" text-anchor="middle" fill="white" font-family="monospace" font-size="10" font-weight="bold">CFM</text>
+    
+    <rect x="120" y="0" width="48" height="24" rx="12" fill="#EAB308"/>
+    <text x="144" y="16" text-anchor="middle" fill="white" font-family="monospace" font-size="10" font-weight="bold">PTR</text>
+    
+    <rect x="180" y="0" width="48" height="24" rx="12" fill="#F97316"/>
+    <text x="204" y="16" text-anchor="middle" fill="white" font-family="monospace" font-size="10" font-weight="bold">MIS</text>
+    
+    <rect x="240" y="0" width="48" height="24" rx="12" fill="#EF4444"/>
+    <text x="264" y="16" text-anchor="middle" fill="white" font-family="monospace" font-size="10" font-weight="bold">FLS</text>
+    
+    <rect x="300" y="0" width="48" height="24" rx="12" fill="#6B7280"/>
+    <text x="324" y="16" text-anchor="middle" fill="white" font-family="monospace" font-size="10" font-weight="bold">UNV</text>
+  </g>
+  
+  <!-- Footer -->
+  <text x="600" y="590" text-anchor="middle" fill="#6B7280" font-family="monospace" font-size="14">Built with Bright Data · CrewAI · Supabase</text>
+</svg>

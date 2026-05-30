@@ -18,14 +18,14 @@ export default function Navbar({ onOpenVerifyModal }: { onOpenVerifyModal?: () =
 
   return (
     <>
-      <nav className="bg-white border-b border-[var(--color-border)] sticky top-0 z-50">
+      <nav className="bg-[var(--color-surface)] border-b border-[var(--color-border)] sticky top-0 z-50">
         <div className="px-6 h-14 flex items-center justify-between">
           {/* Logo */}
           <Link href="/dashboard/feed" className="flex items-center space-x-2.5">
             <svg viewBox="0 0 100 100" width="22" height="22">
               <path
                 d="M 50 5 L 90 20 L 90 55 Q 90 85 50 95 Q 10 85 10 55 L 10 20 Z"
-                fill="#0891B2"
+                fill="#2DD4BF"
               />
             </svg>
             <span className="text-lg font-semibold text-[var(--color-text)]">Verified News</span>
@@ -72,7 +72,7 @@ export default function Navbar({ onOpenVerifyModal }: { onOpenVerifyModal?: () =
 
         {/* Mobile Menu */}
         {mobileOpen && (
-          <div className="md:hidden border-t border-[var(--color-border)] bg-white px-6 py-4 space-y-3">
+          <div className="md:hidden border-t border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-4 space-y-3">
             <Link href="/dashboard/feed" className="block text-sm font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-primary)]" onClick={() => setMobileOpen(false)}>
               Feed
             </Link>
