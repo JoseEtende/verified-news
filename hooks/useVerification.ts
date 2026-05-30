@@ -1,66 +1,87 @@
-import { useState, useEffect } from 'react';
-import { Claim } from '@/lib/types';
+'use client'
 
-// STUB: returns mock data
-// TODO: wire to Supabase Realtime in TASK 7
-export function useVerification() {
-  const [claim, setClaim] = useState<Claim | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+import { useEffect, useState } from 'react'
+import { supabase } from '@/lib/supabase'
+import type { Claim, Verification } from '@/lib/types'
 
-  // Mock data for one completed verification (blue badge, 0.94 confidence)
-  const MOCK_CLAIM: Claim = {
-    id: 'mock-123',
-    input_type: 'url',
-    input_content: 'https://example.com/article',
-    extracted_claim: 'Scientists have discovered a new species of butterfly in the Amazon rainforest.',
-    category: 'Science',
-    track_context: 'consumer',
-    status: 'completed',
-    agent_progress: 'Verification completed',
-    created_at: '2024-01-15T10:30:00Z',
-    updated_at: '2024-01-15T14:20:00Z',
-    verification: {
-      id: 'v-mock-123',
-      claim_id: 'mock-123',
-      badge: 'blue' as const,
-      confidence_score: 0.94,
-      verdict_summary: 'Verified: Multiple independent sources confirm the discovery.',
-      detailed_analysis: 'Three scientific journals and two official biodiversity databases confirm the existence of this new species.',
-      primary_sources_count: 2,
-      secondary_sources_count: 3,
-      contradictions_found: 0,
-      fact_checks_found: 2,
-      processing_time_ms: 1250,
-      model_used: 'veritas-large-v1',
-      created_at: '2024-01-15T14:20:00Z',
-    },
-  };
+export function useVerification(claimId: string | null) {
+  const [claim, setClaim] = useState<Claim | null>(null)
+  const [verification, setVerification] = useState<Verification | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  // Simulate fetching verification data
-  const fetchVerification = async (input: string, type: 'url' | 'text' | 'topic') => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      // In a real app, this would call an API endpoint
-      // For now, we'll simulate with a timeout
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Return mock data
-      setClaim(MOCK_CLAIM);
-    } catch (err) {
-      setError('Failed to fetch verification data');
-      console.error(err);
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    if (!claimId) { setLoading(false); return }
+
+    async function fetchInitial() {
+      const { data: claimData, error: claimErr } = await supabase
+        .from('claims')
+        .select('*')
+        .eq('id', claimId)
+        .single()
+
+      if (claimErr) { setError(claimErr.message); setLoading(false); return }
+      setClaim(claimData)
+      setLoading(false)
+
+      if (claimData.status === 'completed') {
+        const { data: verData } = await supabase
+          .from('verifications')
+          .select('*, sources(*)')
+          .eq('claim_id', claimId)
+          .single()
+        if (verData) setVerification(verData)
+      }
     }
-  };
 
-  return {
-    claim,
-    loading,
-    error,
-    fetchVerification,
-  };
+    fetchInitial()
+
+    const channel = supabase
+      .channel(`claim-${claimId}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'claims', filter: `id=eq.${claimId}` },
+        async (payload) => {
+          setClaim(payload.new as Claim)
+          if (payload.new.status === 'completed') {
+            const { data: verData } = await supabase
+              .from('verifications')
+              .select('*, sources(*)')
+              .eq('claim_id', claimId)
+              .single()
+            if (verData) setVerification(verData)
+          }
+        }
+      )
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [claimId])
+
+  return { claim, verification, loading, error }
+}
+
+export function useFeed(trackContext?: string, badge?: string) {
+  const [claims, setClaims] = useState<Claim[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchFeed() {
+      let query = supabase
+        .from('claims')
+        .select('*, verifications(badge, confidence_score, verdict_summary, primary_sources_count)')
+        .eq('status', 'completed')
+        .order('created_at', { ascending: false })
+        .limit(20)
+
+      if (trackContext) query = query.eq('track_context', trackContext)
+
+      const { data } = await query
+      if (data) setClaims(data)
+      setLoading(false)
+    }
+    fetchFeed()
+  }, [trackContext, badge])
+
+  return { claims, loading }
 }

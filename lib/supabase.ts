@@ -1,2 +1,7 @@
-// TODO: replace with real client in TASK 5
-export const supabase = null as any
+import { createClient } from '@supabase/supabase-js'
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+
+// Browser client (public anon key)
+export const supabase = createClient(supabaseUrl, supabaseAnonKey)
