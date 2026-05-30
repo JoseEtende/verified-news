@@ -1,11 +1,16 @@
 from crewai import Task
 from agents import (
-    discovery_agent, extraction_agent,
-    cross_reference_agent, verdict_agent
+    get_discovery_agent, get_extraction_agent,
+    get_cross_reference_agent, get_verdict_agent
 )
 
 
 def make_tasks(claim_text: str):
+    discovery_agent = get_discovery_agent()
+    extraction_agent = get_extraction_agent()
+    cross_reference_agent = get_cross_reference_agent()
+    verdict_agent = get_verdict_agent()
+
     discovery_task = Task(
         description=f"""
 Claim to investigate: "{claim_text}"

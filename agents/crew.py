@@ -5,7 +5,6 @@ import logging
 from crewai import Crew, Process
 from supabase import create_client
 
-from agents import discovery_agent, extraction_agent, cross_reference_agent, verdict_agent
 from tasks import make_tasks
 from badge_logic import calculate_confidence, determine_badge
 
@@ -36,7 +35,7 @@ def run_verification_crew(claim_id: str, claim_text: str, track_context: str = "
         # Stage 1: Discovery
         update_progress(db, claim_id, "Discovery agent scanning the web...")
         discovery_crew = Crew(
-            agents=[discovery_agent], tasks=[tasks[0]],
+            agents=[tasks[0].agent], tasks=[tasks[0]],
             process=Process.sequential, verbose=True
         )
         discovery_result = discovery_crew.kickoff(inputs={"claim_text": claim_text})
@@ -49,7 +48,7 @@ def run_verification_crew(claim_id: str, claim_text: str, track_context: str = "
         # Stage 2: Extraction
         update_progress(db, claim_id, "Extraction agent reading sources...")
         extraction_crew = Crew(
-            agents=[extraction_agent], tasks=[tasks[1]],
+            agents=[tasks[1].agent], tasks=[tasks[1]],
             process=Process.sequential, verbose=True
         )
         extraction_result = extraction_crew.kickoff(inputs={"claim_text": claim_text})
@@ -62,7 +61,7 @@ def run_verification_crew(claim_id: str, claim_text: str, track_context: str = "
         # Stage 3: Cross-reference
         update_progress(db, claim_id, "Cross-reference agent fact-checking...")
         xref_crew = Crew(
-            agents=[cross_reference_agent], tasks=[tasks[2]],
+            agents=[tasks[2].agent], tasks=[tasks[2]],
             process=Process.sequential, verbose=True
         )
         xref_result = xref_crew.kickoff(inputs={"claim_text": claim_text})
@@ -75,7 +74,7 @@ def run_verification_crew(claim_id: str, claim_text: str, track_context: str = "
         # Stage 4: Verdict
         update_progress(db, claim_id, "Verdict agent synthesising result...")
         verdict_crew = Crew(
-            agents=[verdict_agent], tasks=[tasks[3]],
+            agents=[tasks[3].agent], tasks=[tasks[3]],
             process=Process.sequential, verbose=True
         )
         verdict_raw = verdict_crew.kickoff(inputs={"claim_text": claim_text})
