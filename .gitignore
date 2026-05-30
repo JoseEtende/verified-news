@@ -1,0 +1,10 @@
+node_modules/
+.next/
+.env.local
+.env*.local
+*.otf
+!public/fonts/*.otf
+__pycache__/
+*.pyc
+.venv/
+agents/.env
